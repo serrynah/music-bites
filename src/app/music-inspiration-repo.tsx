@@ -113,6 +113,8 @@ export function MusicInspirationRepo() {
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement }>({})
   const supabase = getSupabase()
 
+  console.log('hi')
+
   // Load snippets on mount
   useEffect(() => {
     if (supabase) {
