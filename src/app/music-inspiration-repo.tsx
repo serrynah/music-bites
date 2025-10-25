@@ -108,44 +108,19 @@ export function MusicInspirationRepo() {
   const [currentlyPlaying, setCurrentlyPlaying] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [useLocalStorage, setUseLocalStorage] = useState(false)
   const audioRefs = useRef<{ [key: string]: HTMLAudioElement }>({})
   const fileInputRefs = useRef<{ [key: string]: HTMLInputElement }>({})
-  const supabase = getSupabase()
+  const supabase = getSupabase();
 
-  console.log('hi')
 
   // Load snippets on mount
   useEffect(() => {
     if (supabase) {
       loadSnippetsFromDatabase()
     } else {
-      loadSnippetsFromLocalStorage()
-      setUseLocalStorage(true)
+    console.error('broken')
     }
   }, [])
-
-  // Save to localStorage when using fallback mode
-  useEffect(() => {
-    if (useLocalStorage && snippets.length > 0) {
-      localStorage.setItem("musicSnippets", JSON.stringify(snippets))
-    }
-  }, [snippets, useLocalStorage])
-
-  const loadSnippetsFromLocalStorage = () => {
-    try {
-      setLoading(true)
-      const saved = localStorage.getItem("musicSnippets")
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        setSnippets(parsed)
-      }
-    } catch (error) {
-      console.error("Error loading from localStorage:", error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   const loadSnippetsFromDatabase = async () => {
     if (!supabase) return
@@ -156,12 +131,9 @@ export function MusicInspirationRepo() {
 
       if (error) throw error
 
-      setSnippets(data || [])
+      setSnippets(|| [])
     } catch (error) {
       console.error("Error loading snippets:", error)
-      // Fallback to localStorage on error
-      loadSnippetsFromLocalStorage()
-      setUseLocalStorage(true)
     } finally {
       setLoading(false)
     }
@@ -169,9 +141,7 @@ export function MusicInspirationRepo() {
 
   const saveSnippet = async (snippet: MusicSnippet) => {
     if (!supabase) {
-      // Save to localStorage when Supabase is not available
-      const updatedSnippets = snippets.map((s) => (s.id === snippet.id ? snippet : s))
-      localStorage.setItem("musicSnippets", JSON.stringify(updatedSnippets))
+      console.error('broken')
       return
     }
 
@@ -193,10 +163,7 @@ export function MusicInspirationRepo() {
       if (error) throw error
     } catch (error) {
       console.error("Error saving snippet:", error)
-      // Fallback to localStorage on error
-      const updatedSnippets = snippets.map((s) => (s.id === snippet.id ? snippet : s))
-      localStorage.setItem("musicSnippets", JSON.stringify(updatedSnippets))
-      setUseLocalStorage(true)
+
     } finally {
       setSaving(false)
     }
@@ -226,16 +193,14 @@ export function MusicInspirationRepo() {
         if (error) throw error
       } catch (error) {
         console.error("Error deleting snippet:", error)
-        setUseLocalStorage(true)
       }
     }
 
     const updatedSnippets = snippets.filter((snippet) => snippet.id !== id)
     setSnippets(updatedSnippets)
 
-    // Save to localStorage
-    if (!supabase || useLocalStorage) {
-      localStorage.setItem("musicSnippets", JSON.stringify(updatedSnippets))
+    if (!supabase) {
+    console.error('no supabase')
     }
 
     if (audioRefs.current[id]) {
@@ -296,12 +261,12 @@ export function MusicInspirationRepo() {
     return cleaned.replace(/\b\w/g, (l) => l.toUpperCase())
   }
 
-  const fetchSpotifyTrackInfo = async (url: string): Promise<string | null> => {
+  const fetchSpotifyTrackInfo = async (url: string): Promise<any | null> => {
     try {
       const response = await fetch(`https://open.spotify.com/oembed?url=${encodeURIComponent(url)}`)
       if (response.ok) {
         const data = await response.json()
-        return data.title || null
+        return data || null
       }
     } catch (error) {
       console.error("Error fetching Spotify track info:", error)
@@ -349,9 +314,7 @@ export function MusicInspirationRepo() {
     if (url && url.includes("spotify.com/track/")) {
       const trackInfo = await fetchSpotifyTrackInfo(url)
       if (trackInfo) {
-        const finalSnippets = snippets.map((s) => (s.id === id ? { ...s, song_name: s.song_name || trackInfo } : s))
-        setSnippets(finalSnippets)
-        const updatedSnippet = finalSnippets.find((s) => s.id === id)
+        const updatedSnippet = trackInfo
         if (updatedSnippet) {
           await saveSnippet(updatedSnippet)
         }
@@ -566,16 +529,6 @@ export function MusicInspirationRepo() {
           </div>
         </CardHeader>
         <CardContent>
-          {useLocalStorage && (
-            <Alert className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Using Local Storage</AlertTitle>
-              <AlertDescription>
-                Supabase is not configured. Your snippets are saved locally in your browser. To enable cloud storage,
-                add the Supabase integration.
-              </AlertDescription>
-            </Alert>
-          )}
 
           {snippets.length === 0 ? (
             <div className="text-center py-12">
